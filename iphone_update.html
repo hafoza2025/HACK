@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Software Update</title>
+    <style>
+        body {
+            background-color: #000;
+            color: #fff;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        /* أيقونة الترس الخاصة بالإعدادات */
+        .icon-container {
+            width: 100px;
+            height: 100px;
+            background: #333;
+            border-radius: 22px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 25px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+        }
+
+        .gear-icon {
+            font-size: 50px;
+            animation: spin 4s linear infinite;
+        }
+
+        @keyframes spin {
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+
+        h1 {
+            font-size: 22px;
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+
+        p {
+            color: #888;
+            font-size: 14px;
+            margin-top: 0;
+            margin-bottom: 30px;
+        }
+
+        /* تفاصيل التحديث */
+        .update-info {
+            background: #1c1c1e;
+            width: 90%;
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 30px;
+            text-align: right;
+            direction: rtl;
+        }
+
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            border-bottom: 1px solid #333;
+            padding: 10px 0;
+            font-size: 15px;
+        }
+
+        .info-row:last-child {
+            border-bottom: none;
+        }
+
+        .label {
+            color: #fff;
+        }
+
+        .value {
+            color: #888;
+        }
+
+        /* شريط التحميل */
+        .progress-container {
+            width: 85%;
+            margin-top: 20px;
+        }
+
+        .progress-bar-bg {
+            background: #333;
+            height: 4px;
+            border-radius: 2px;
+            width: 100%;
+            position: relative;
+        }
+
+        .progress-bar-fill {
+            background: #007aff;
+            /* لون أزرق ابل */
+            height: 100%;
+            border-radius: 2px;
+            width: 0%;
+            transition: width 0.2s linear;
+        }
+
+        .status-text {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 10px;
+            font-size: 13px;
+            color: #888;
+            direction: ltr;
+            /* للأرقام */
+        }
+
+        /* اللوغ الكاذب */
+        .log-area {
+            position: absolute;
+            bottom: 20px;
+            width: 90%;
+            height: 100px;
+            font-family: 'Courier New', monospace;
+            font-size: 10px;
+            color: #00ff00;
+            overflow: hidden;
+            opacity: 0.7;
+            text-align: left;
+            direction: ltr;
+        }
+
+        /* زر البدء المخفي */
+        #startOverlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .btn-start {
+            color: #007aff;
+            font-size: 18px;
+            background: none;
+            border: none;
+            cursor: pointer;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="startOverlay" onclick="startUpdate()">
+        <button class="btn-start">Install Now</button>
+    </div>
+
+    <div class="icon-container">
+        <div class="gear-icon">⚙️</div>
+    </div>
+
+    <h1>HafezOS 17.0 Pro</h1>
+    <p>Apple Inc.</p>
+
+    <div class="update-info">
+        <div class="info-row">
+            <span class="value">Hafez v9.0 Rooted</span>
+            <span class="label">الإصدار</span>
+        </div>
+        <div class="info-row">
+            <span class="value">52.4 GB</span>
+            <span class="label">الحجم</span>
+        </div>
+        <div class="info-row" style="color: #ff3b30; font-size: 12px;">
+            يتضمن حزم الروت الكاملة للمعالج A10 Fusion
+        </div>
+    </div>
+
+    <div class="progress-container">
+        <div class="progress-bar-bg">
+            <div class="progress-bar-fill" id="fill"></div>
+        </div>
+        <div class="status-text">
+            <span id="downloaded">0 GB</span>
+            <span id="remaining">Estimating time...</span>
+        </div>
+    </div>
+
+    <div class="log-area" id="logs"></div>
+
+    <script>
+        const fill = document.getElementById('fill');
+        const downloadedText = document.getElementById('downloaded');
+        const remainingText = document.getElementById('remaining');
+        const logs = document.getElementById('logs');
+        const totalSize = 52.4; // GB
+
+        function addLog(text) {
+            const div = document.createElement('div');
+            div.textContent = "> " + text;
+            logs.appendChild(div);
+            if (logs.childNodes.length > 6) logs.removeChild(logs.firstChild);
+        }
+
+        function startUpdate() {
+            document.getElementById('startOverlay').style.display = 'none';
+            // طلب ملء الشاشة (قد يحتاج تدخل المستخدم في ايفون)
+            document.documentElement.requestFullscreen().catch(() => { });
+
+            let percentage = 0;
+            let currentSize = 0;
+
+            // سرعة التحميل: نريد الوصول لـ 40% في أقل من دقيقة (مثلاً 40 ثانية)
+            // 40% من 52 جيجا = 20.8 جيجا
+            // سنقوم بالتحديث كل 100 ملي ثانية
+            // 400 تحديثة تقريباً
+
+            const interval = setInterval(() => {
+                // زيادة النسبة
+                if (percentage < 40) {
+                    // سرعة عشوائية وسريعة
+                    percentage += Math.random() * 0.3;
+                    currentSize = (percentage / 100) * totalSize;
+
+                    fill.style.width = percentage + "%";
+                    downloadedText.textContent = currentSize.toFixed(1) + " GB / " + totalSize + " GB";
+                    remainingText.textContent = "Downloading...";
+
+                    // لوغ وهمي سريع
+                    if (Math.random() > 0.7) {
+                        addLog("Downloading Packet: " + Math.floor(Math.random() * 99999));
+                    }
+                }
+                else {
+                    // وصلنا 40% -> التوقف
+                    percentage = 40;
+                    currentSize = (40 / 100) * totalSize; // تثبيت الرقم بدقة
+
+                    fill.style.width = "40%";
+                    fill.style.backgroundColor = "#ffcc00"; // تحويل اللون للأصفر (تحذير)
+                    downloadedText.textContent = currentSize.toFixed(1) + " GB / " + totalSize + " GB";
+                    remainingText.textContent = "Paused..."; // تغيير النص
+
+                    clearInterval(interval);
+
+                    // إضافة لوغ التوقف
+                    addLog("Error: Connection Throttled");
+                    addLog("Waiting for Server Response...");
+                    addLog("Buffer Overflow at 40%");
+                }
+            }, 50); // سرعة التحديث (50ms) سريعة جداً
+        }
+    </script>
+</body>
+
+</html>
